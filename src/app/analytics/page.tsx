@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Expense } from '@/types/expense';
 import { Dashboard } from '@/components/Dashboard';
@@ -11,7 +11,7 @@ import { calculateMonthlyProjects, formatCurrency } from '@/lib/utils';
 import { getExpenses, saveExpenses, getAuthToken, clearAuthTokens, getLastSyncTime, saveLastSyncTime } from '@/lib/storage';
 import { LogOut, Loader, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function AnalyticsPage() {
+function AnalyticsContent() {
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -389,5 +389,19 @@ export default function AnalyticsPage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+export default function AnalyticsPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex flex-col min-h-screen bg-slate-50">
+        <div className="flex-grow flex items-center justify-center">
+          <Loader className="animate-spin" size={32} />
+        </div>
+      </main>
+    }>
+      <AnalyticsContent />
+    </Suspense>
   );
 }
