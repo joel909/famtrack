@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: 'Track your FamApp expenses with Gmail integration',
   icons: {
     icon: '/favicon.svg',
+    apple: '/favicon.svg',
   },
 };
 

@@ -1,0 +1,24 @@
+{
+  "name": "FamTrack - Expenditure Tracking",
+  "short_name": "FamTrack",
+  "description": "Track your FamApp expenses with Gmail integration",
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#3B82F6",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
