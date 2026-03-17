@@ -19,20 +19,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate environment variables
+    if (!CLIENT_ID || !CLIENT_SECRET) {
+      console.error('Missing OAuth credentials. CLIENT_ID:', !!CLIENT_ID, 'CLIENT_SECRET:', !!CLIENT_SECRET);
+      return NextResponse.json(
+        { error: 'Server configuration error: Missing OAuth credentials' },
+        { status: 500 }
+      );
+    }
+
     const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
     oauth2Client.setCredentials({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
 
-    // Attempt to refresh the token if it might be expired
+    // Attempt to refresh the token proactively
+    let refreshedTokens = null;
     try {
       const { credentials } = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(credentials);
+      refreshedTokens = credentials;
+      
+      // Log the new access token so client can update localStorage
+      console.log('Token refreshed successfully');
     } catch (refreshError: any) {
-      // If refresh fails with 400/401, the refresh token might be invalid
-      // Continue with the original access token - it might still be valid
-      console.warn('Token refresh failed, attempting with current token:', refreshError.message);
+      // If refresh fails, don't immediately error out
+      // The original access token might still be valid
+      const errorMessage = refreshError?.message || JSON.stringify(refreshError);
+      console.warn('Token refresh failed, continuing with current access token:', errorMessage);
+      // Will proceed with original accessToken set earlier
     }
 
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -57,11 +73,21 @@ export async function POST(request: NextRequest) {
       console.log('Initial sync - fetching 2 years of emails after:', dateStr);
     }
     
-    const response = await gmail.users.messages.list({
-      userId: 'me',
-      q: `(from:no-reply@famapp.in OR from:noreply@famapp.in) after:${dateStr}`,
-      maxResults: 500,
-    });
+    let response;
+    try {
+      response = await gmail.users.messages.list({
+        userId: 'me',
+        q: `(from:no-reply@famapp.in OR from:noreply@famapp.in) after:${dateStr}`,
+        maxResults: 500,
+      });
+    } catch (gmailError: any) {
+      console.error('Gmail API call failed:', {
+        message: gmailError?.message,
+        code: gmailError?.code,
+        status: gmailError?.status,
+      });
+      throw new Error(`Gmail API error: ${gmailError?.message || 'Unknown error'}`);
+    }
 
     const messages = response.data.messages || [];
     
@@ -148,12 +174,45 @@ export async function POST(request: NextRequest) {
       success: true,
       count: expenses.length,
       expenses,
+      ...(refreshedTokens && {
+        tokens: {
+          accessToken: refreshedTokens.access_token,
+          refreshToken: refreshedTokens.refresh_token || refreshToken,
+        }
+      })
     });
-  } catch (error) {
-    console.error('Error fetching Gmail data:', error);
+  } catch (error: any) {
+    const errorMessage = error?.message || JSON.stringify(error);
+    
+    console.error('Error fetching Gmail data:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+      errors: error?.errors,
+    });
+    
+    // Determine if this is an auth failure requiring re-login
+    let needsReauth = false;
+    let statusCode = 500;
+    let errorMsg = 'Failed to fetch expenses from Gmail';
+    
+    if (errorMessage.includes('invalid_grant') || 
+        error?.status === 401 || 
+        error?.code === 'auth/invalid-token' ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('Unauthorized')) {
+      errorMsg = 'Session expired. Please log in again.';
+      needsReauth = true;
+      statusCode = 401;
+    } else if (errorMessage.includes('quota')) {
+      errorMsg = 'Gmail API quota exceeded. Please try again later.';
+    } else if (error?.code === 'ERR_OSSL' || error?.code === 'ENOTFOUND') {
+      errorMsg = 'Network error connecting to Gmail API';
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch expenses from Gmail' },
-      { status: 500 }
+      { error: errorMsg, needsReauth },
+      { status: statusCode }
     );
   }
 }

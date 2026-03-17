@@ -38,7 +38,11 @@ export default function Home() {
   const getCookieValue = (name: string): string | null => {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    if (parts.length === 2) {
+      const token = parts.pop()?.split(';').shift() || null;
+      // Decode URL-encoded tokens
+      return token ? decodeURIComponent(token) : null;
+    }
     return null;
   };
 
@@ -88,8 +92,20 @@ export default function Home() {
       const data = await response.json();
       
       if (!response.ok) {
+        // Check if it's an auth error that requires re-login
+        if (data.needsReauth && response.status === 401) {
+          clearAuthTokens();
+          setIsAuthenticated(false);
+          alert('Your session has expired. Please log in again.');
+          return;
+        }
         alert(`Error: ${data.error}`);
         return;
+      }
+
+      // Update tokens if refreshed ones are provided
+      if (data.tokens) {
+        saveAuthTokens(data.tokens.accessToken, data.tokens.refreshToken);
       }
 
       if (data.success && data.expenses) {
