@@ -189,6 +189,7 @@ export async function POST(request: NextRequest) {
       code: error?.code,
       status: error?.status,
       errors: error?.errors,
+      fullError: error,
     });
     
     // Determine if this is an auth failure requiring re-login
@@ -211,7 +212,11 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: errorMsg, needsReauth },
+      { 
+        error: errorMsg, 
+        needsReauth,
+        details: errorMessage // Include details for debugging
+      },
       { status: statusCode }
     );
   }

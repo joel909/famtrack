@@ -99,7 +99,8 @@ export default function Home() {
           alert('Your session has expired. Please log in again.');
           return;
         }
-        alert(`Error: ${data.error}`);
+        const errorMsg = data.details ? `${data.error}\n\nDetails: ${data.details}` : data.error;
+        alert(`Error: ${errorMsg}`);
         return;
       }
 
