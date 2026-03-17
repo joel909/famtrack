@@ -11,9 +11,10 @@ interface DashboardProps {
   isLoading?: boolean;
   onSyncClick?: () => void;
   rangeLabel?: string;
+  dateRange?: '30d' | '3m' | '6m' | '1y' | 'all' | 'custom';
 }
 
-export function Dashboard({ expenses, isLoading = false, onSyncClick, rangeLabel = 'Selected Period' }: DashboardProps) {
+export function Dashboard({ expenses, isLoading = false, onSyncClick, rangeLabel = 'Selected Period', dateRange }: DashboardProps) {
   const router = useRouter();
   const [monthlyProjects, setMonthlyProjects] = useState<MonthlyProject[]>([]);
   const [totalSpent, setTotalSpent] = useState(0);
@@ -156,7 +157,9 @@ export function Dashboard({ expenses, isLoading = false, onSyncClick, rangeLabel
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900">Month</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900">
+                    {dateRange ? 'Period' : 'Month'}
+                  </th>
                   <th className="px-6 py-3 text-right font-semibold text-slate-900">Total Spent</th>
                   <th className="px-6 py-3 text-right font-semibold text-slate-900">Total Income</th>
                   <th className="px-6 py-3 text-right font-semibold text-slate-900">Net Change</th>
@@ -164,9 +167,30 @@ export function Dashboard({ expenses, isLoading = false, onSyncClick, rangeLabel
                 </tr>
               </thead>
               <tbody>
-                {monthlyProjects.map((project, idx) => (
-                  <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{project.month}</td>
+                {monthlyProjects.map((project, idx) => {
+                  let displayMonth = project.month;
+                  
+                  // Show date ranges for all date range options
+                  if (dateRange && expenses.length > 0) {
+                    const projectExpenses = expenses.filter(e => 
+                      e.date.startsWith(project.month.split('-').slice(0, 2).join('-'))
+                    );
+                    if (projectExpenses.length > 0) {
+                      const dates = projectExpenses.map(e => new Date(e.date));
+                      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+                      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+                      const formatDateShort = (date: Date) => {
+                        const month = date.toLocaleString('default', { month: 'short' });
+                        const day = date.getDate();
+                        return `${month} ${day}`;
+                      };
+                      displayMonth = `${formatDateShort(minDate)} - ${formatDateShort(maxDate)}`;
+                    }
+                  }
+                  
+                  return (
+                    <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-slate-900">{displayMonth}</td>
                     <td className="px-6 py-4 text-right text-red-600 font-semibold">
                       {formatCurrency(project.totalSpent)}
                     </td>
@@ -187,8 +211,9 @@ export function Dashboard({ expenses, isLoading = false, onSyncClick, rangeLabel
                         <ChevronRight size={16} />
                       </button>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

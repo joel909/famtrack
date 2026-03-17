@@ -197,7 +197,11 @@ export async function POST(request: NextRequest) {
     let statusCode = 500;
     let errorMsg = 'Failed to fetch expenses from Gmail';
     
-    if (errorMessage.includes('invalid_grant') || 
+    if (errorMessage.includes('insufficient authentication scopes')) {
+      errorMsg = 'App permissions changed. Please log in again to grant updated permissions.';
+      needsReauth = true;
+      statusCode = 401;
+    } else if (errorMessage.includes('invalid_grant') || 
         error?.status === 401 || 
         error?.code === 'auth/invalid-token' ||
         errorMessage.includes('401') ||

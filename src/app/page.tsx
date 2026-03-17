@@ -133,6 +133,8 @@ export default function Home() {
 
   const handleLogout = () => {
     clearAuthTokens();
+    saveExpenses([]); // Clear all expenses from localStorage
+    saveLastSyncTime(''); // Clear last sync time for fresh full sync on next login
     setIsAuthenticated(false);
     setExpenses([]);
   };

@@ -60,15 +60,33 @@ function AnalyticsContent() {
   };
 
   const getRangeLabel = () => {
+    const formatDateShort = (date: Date) => {
+      const month = date.toLocaleString('default', { month: 'short' });
+      const day = date.getDate();
+      return `${month} ${day}`;
+    };
+
     switch (dateRange) {
-      case '30d':
-        return 'Last 30 Days';
-      case '3m':
-        return 'Last 3 Months';
-      case '6m':
-        return 'Last 6 Months';
-      case '1y':
-        return 'Last Year';
+      case '30d': {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+        return `${formatDateShort(start)} - ${formatDateShort(now)}`;
+      }
+      case '3m': {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        return `${formatDateShort(start)} - ${formatDateShort(now)}`;
+      }
+      case '6m': {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+        return `${formatDateShort(start)} - ${formatDateShort(now)}`;
+      }
+      case '1y': {
+        const now = new Date();
+        const start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        return `${formatDateShort(start)} - ${formatDateShort(now)}`;
+      }
       case 'all':
         return 'All Time';
       case 'custom':
@@ -339,6 +357,7 @@ function AnalyticsContent() {
                   isLoading={isLoading}
                   onSyncClick={handleSync}
                   rangeLabel={getRangeLabel()}
+                  dateRange={dateRange}
                 />
 
                 {/* Charts */}
